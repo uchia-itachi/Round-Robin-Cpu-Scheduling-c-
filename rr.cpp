@@ -10,12 +10,13 @@
 #include<time.h>
 #include<iomanip>
 using namespace std;
-
+int processcount=0;//counts total no of process created.
+int finishcount=0;//counts total no of process finished.
 
 struct node
 {
     int time;
-    char c[4];
+    char c[5];
     node *next;
     node *prev;
 };
@@ -24,6 +25,7 @@ struct node
 node *insertion(node *start)
 {
     static int i=1;
+    processcount++;
     node *n=new node;
     n->next=NULL;
     n->prev=NULL;
@@ -31,24 +33,34 @@ node *insertion(node *start)
     n->time=rand()%20+1;
     n->c[0]='P';
     int rev=0,j=i;
-    while(j)
+    int fc=0;
+    //below two loops are used to reverse the ll time so we can easily enter in char array;
+    while(j)//1st loop
     {
         rev=rev*10+j%10;
+        if(j%10==0)
+            fc++;
         j=j/10;
     }
-    if(rev/10==0)
+    if(rev<10 && fc==0)
     {
         rev=rev*10;
     }
     j=1;
-    while(rev)
+    while(rev)//2nd loop
     {
         n->c[j]=(rev%10+'0');
         rev=rev/10;
         j++;
     }
+    while(fc--)
+    {
+        n->c[j]='0';
+        j++;
+    }
     n->c[j]='\0';
     i++;
+    // cout<<n->c<<" "<<n->time<<endl;
     if(start==NULL)
     {
         start=n;
@@ -75,59 +87,68 @@ node *insertion(node *start)
 int delTime(node *start,int time,char **arr,int *val)
 {
     int operationtime=rand()%100;
-    cout<<"optime="<<operationtime<<endl;
+    while(operationtime<20)
+    {
+        operationtime=rand()%100;
+    }
+    cout<<"Total Scheduling Time="<<operationtime<<endl;
     int i=0;
     int ttime=0;
     //the down while loop will run until there in only one process in linked list and its value should also be less than 0 to stop;
     while(operationtime>0 && (start->next!=start || start->time>0))
+
     {
-        int ctime=0;
-        start=insertion(start);
-        if(start->time-time>0)
+        int generation=rand()%10;
+        if(generation<5)
         {
-            start->time=start->time-time;
-            ctime=time;
-            ttime+=time;
-            char *p=start->c;
-            arr[i]=p;
-            val[i]=ttime;
-            i++;
-            /*char cn[2];//char node which stores node process number;
-            			int nc=0; //char node node count used to copy  node process no;
-            			while(start->c[nc]!='\0'){
-            				cn[nc]=start->c[nc];
-            				nc++;
-            			}
-            			cn[nc]='\0';
-            			char *p=cn;
-            			arr[i]=p;
-            			i++;*/
-            start=start->next;
+            start=insertion(start);//used to insert process at random time
         }
-        else if(start->time-time<=0)
+        int ctime=0;//ctime will store the time for which the process gets executed  and and subtract it from total operation time;
+        if(start->time-time>0)//is process time is greater then quantam time
         {
-            ttime+=start->time;
-            ctime=start->time;
-            start->time=start->time-time;
-            node *t=start;
-            start=start->next;
-            t->prev->next=t->next;;
-            start->prev=t->prev;
-            char *p=t->c;
-            arr[i]=p;
-            val[i]=ttime;
-            i++;
-            /*char cn[2];//char node which stores node process number;
-            int nc=0; //char node node count used to copy  node process no;
-            while(t->c[nc]!='\0'){
-            	cn[nc]=t->c[nc];
-            	nc++;
+            if(operationtime<time)//if oeration time < than quantime time, do not run exit the loop;;
+            {
+                ctime=operationtime;
             }
-            cn[nc]='\0';
-            char *p=cn;
-            arr[i]=p;
-            i++;*/
-            //free(t);
+            else
+            {
+                start->time=start->time-time;
+                ctime=time;
+                ttime+=time;
+                char *p=new char[10];
+                p=start->c;
+                arr[i]=p;
+                val[i]=ttime;
+                i++;
+
+                start=start->next;
+            }
+
+        }
+        else if(start->time-time<=0)//if process time is equal to or less than quantam time
+        {
+
+            if(operationtime<start->time)// if operation time is < than process time exit the loop
+            {
+                ctime=start->time;
+            }
+            else
+            {
+                ttime+=start->time;
+                ctime=start->time;
+                start->time=start->time-time;
+                node *t=start;
+                start=start->next;
+                t->prev->next=t->next;;
+                start->prev=t->prev;
+                char *p=new char[10];
+                p=t->c;
+                arr[i]=p;
+                val[i]=ttime;
+                i++;
+                finishcount++;
+            }
+
         }
         operationtime-=ctime;
 
@@ -135,28 +156,16 @@ int delTime(node *start,int time,char **arr,int *val)
     return i;
 }
 
-
-void display(node *start)
-{
-    node *t=start;
-    do
-    {
-        cout<<t->c<<" "<<t->time<<" ";
-        t=t->next;
-    }
-    while(t!=start);
-    cout<<endl;
-}
-
 void printGang(char ** arr,int i,int *val)
 {
-
+    cout<<endl<<"Gang Chart Of Process Which Gets Executed"<<endl;
     cout<<"----------------------"<<endl;
     cout<<"|  Process  |  Time  |"<<endl;
     cout<<"----------------------"<<endl;
     for(int j=0; j<i; j++)
     {
-        cout<<"|    "<<arr[j]<<"    |   "<<setw(2) << std::setfill('0')<<val[j]<<"   |"<<endl;
+        cout<<"|    "<<arr[j]<<"    |   ";
+        cout<<setw(3) << std::setfill(' ')<<val[j]<<"  |"<<endl;
     }
     cout<<"----------------------"<<endl;
 }
@@ -165,15 +174,20 @@ int main()
 {
     srand(time(0));
     node *start=NULL;
-    start=insertion(start);
-    int delt;
-    cout<<"enter quantam time = ";
-    cin>>delt;
+    for(int i=0; i<3; i++)
+        start=insertion(start);
+    int delt=0;
+    while(delt<5)
+    {
+
+        delt=rand()%10+1;
+    }
+    cout<<"Quantam Time = "<<delt<<endl;
     char **arr=(char **)malloc(100*sizeof(int*));
     int *val=(int *)malloc(100*sizeof(int));
     int i=delTime(start,delt,arr,val);
-    //display(start);
-    cout<<"i = "<<i<<endl;
+    cout<<"Total Process In The Queue = "<<processcount<<endl;
     printGang(arr,i,val);
+    cout<<"Total Process Completed = "<<finishcount<<endl;
 
 }
